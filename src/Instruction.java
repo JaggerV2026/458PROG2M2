@@ -20,6 +20,46 @@ public class Instruction {
         disassemble(hexString);
     }
 
+    public String getInstructionType(){
+        return instructionType;
+    }
+
+    public String getMnemonic(){
+        return mnemonic;
+    }
+
+    public String getOpcode(){
+        return opcode;
+    }
+
+    public String getRs(){
+        return rs;
+    }
+
+    public String getRt(){
+        return rt;
+    }
+
+    public String getRd(){
+        return rd;
+    }
+
+    public String getShmt(){
+        return shmt;
+    }
+
+    public String getFunct(){
+        return funct;
+    }
+
+    public String getImmediate(){
+        return immediate;
+    }
+
+    public String getIndex(){
+        return index;
+    }
+    
     public String toString(){
         String toPrint = "Error";
         switch(instructionType){
