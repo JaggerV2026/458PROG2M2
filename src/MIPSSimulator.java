@@ -1,4 +1,6 @@
+import java.io.File;
 import java.util.Scanner;
+import java.io.FileNotFoundException;
 
 public class MIPSSimulator {
     //Program counter will be inherently divided by 4.
@@ -35,6 +37,41 @@ public class MIPSSimulator {
     Output: 0 on safe return, -1 on unsafe return.
      */
     public int mainLoop(String dataFile, String textFile) {
+       //Read files
+        try{
+            //Read .data
+            File dataInput = new File(dataFile);
+            Scanner dataReader = new Scanner(dataInput);
+            //Want to end at a line of 00000000, but should be included in case it
+            //contains the null termination
+            boolean endOfData = false;
+            int dataArrayIndex = 0;
+            while(dataReader.hasNextLine() & !endOfData){
+                String dataLine = dataReader.nextLine();
+                endOfData = dataLine.equals("00000000");
+                //Each element should contain 2 hex characters
+                for(int i = 0; i < 4; i++){
+                    dataArray[dataArrayIndex] = dataLine.substring(i, i+2);
+                    ++dataArrayIndex;
+                }
+            }
+            dataReader.close();
+
+            //Read .text
+            File textInput = new File(textFile);
+            Scanner textReader = new Scanner(textInput);
+            int textArrayIndex = 0;
+            while(textReader.hasNextLine()){
+                textArray[textArrayIndex] = new Instruction(textReader.nextLine());
+                ++textArrayIndex;
+            }
+            textReader.close();
+
+        }
+        catch(FileNotFoundException e){
+            System.out.println("Data file not found");
+        }
+
         //Maybe include a check that prohibits $0 from being changed
         while (textArray[programCounter] != null && !terminateSimulation) {
 
@@ -229,6 +266,7 @@ public class MIPSSimulator {
                 System.out.println(a0);
                 break;
             case PRINTSTRINGCODE:
+                //Might need to divide this by 4. Not sure yet.
                 int dataIndex = Integer.parseInt(registerArray[4],16) - INITIALDATA;
                 int dataRead = Integer.parseInt(dataArray[dataIndex]);
                 while(dataRead != 0){
