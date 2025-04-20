@@ -74,9 +74,91 @@ public class MIPSSimulator {
 
         //Maybe include a check that prohibits $0 from being changed
         while (textArray[programCounter] != null && !terminateSimulation) {
-
+            Instruction currentInstruction = textArray[programCounter];
+            ++programCounter;
+            switch(currentInstruction.getMnemonic()){
+                case "add":
+                    add(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getRd());
+                    break;
+                case "addiu":
+                    addiu(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "and":
+                    and(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getRd());
+                    break;
+                case "andi":
+                    andi(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "beq":
+                    beq(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "bne":
+                    bne(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "j":
+                    j(currentInstruction.getIndex());
+                    break;
+                case "lui":
+                    lui(currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "lw":
+                    lw(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "or":
+                    or(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getRd());
+                    break;
+                case "ori":
+                    ori(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "slt":
+                    slt(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getRd());
+                    break;
+                case "sub":
+                    sub(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getRd());
+                    break;
+                case "sw":
+                    sw(currentInstruction.getRs(),
+                            currentInstruction.getRt(),
+                            currentInstruction.getImmediate());
+                    break;
+                case "syscall":
+                    syscall();
+                    break;
+                default:
+                    System.out.println("Unknown instruction");
+                    break;
+            }
         }
-        return -1;
+        //Used to indicate safe vs unsafe termination
+        if(terminateSimulation){
+            return 0;
+        }
+        else{
+            return -1;
+        }
     }
 
     /*
