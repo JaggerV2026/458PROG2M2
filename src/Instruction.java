@@ -59,7 +59,7 @@ public class Instruction {
     public String getIndex(){
         return index;
     }
-    
+
     public String toString(){
         String toPrint = "Error";
         switch(instructionType){
