@@ -1,13 +1,15 @@
-import java.util.Dictionary;
-import java.util.Hashtable;
+import java.util.Scanner;
 
 public class MIPSSimulator {
     //Program counter will be inherently divided by 4.
     //Commands that use PC like branches and jumps are already word addressed
     private int programCounter;
+    private final int INITIALSP = 2147479548;
+    private final int INITIALDATA = 268500992;
     //I think string is good for this since everything else is strings.
     // Include a read register function.
     private String[] registerArray = new String[32];
+    private String[] memoryArray = new String[256];
     //Arbitrary sizes. Could be dynamically resized, but this works for now.
     private String[] dataArray = new String[256];
     private Instruction[] textArray = new Instruction[256];
@@ -19,14 +21,22 @@ public class MIPSSimulator {
 
     private boolean terminateSimulation = false;
 
+    public MIPSSimulator() {
+        //$zero value
+        registerArray[0] = "00000000";
+        //$sp value
+        registerArray[29] = "7fffeffc";
+    }
+
     /*
     Main simulation loop.
     Run until end of program or syscall where registerArray[2] = 10
     Inputs: String paths for .data and .text file
     Output: 0 on safe return, -1 on unsafe return.
      */
-    public int mainLoop(String dataFile, String textFile){
-        while(textArray[programCounter] != null && !terminateSimulation){
+    public int mainLoop(String dataFile, String textFile) {
+        //Maybe include a check that prohibits $0 from being changed
+        while (textArray[programCounter] != null && !terminateSimulation) {
 
         }
         return -1;
@@ -35,7 +45,7 @@ public class MIPSSimulator {
     /*
     Simulate add instruction. rs + rt -> rd
      */
-    private void add(String rs, String rt, String rd){
+    private void add(String rs, String rt, String rd) {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decRd = Integer.parseInt(rd, 16);
@@ -45,7 +55,7 @@ public class MIPSSimulator {
     /*
     Simulate addiu instruction. rs + immediate -> rt
      */
-    private void addiu(String rs, String rt, String immediate){
+    private void addiu(String rs, String rt, String immediate) {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decImmediate = Integer.parseInt(immediate, 16);
@@ -55,7 +65,7 @@ public class MIPSSimulator {
     /*
     Simulate and instruction. rs & rt -> rd
      */
-    private void and(String rs, String rt, String rd){
+    private void and(String rs, String rt, String rd) {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decRd = Integer.parseInt(rd, 16);
@@ -65,7 +75,7 @@ public class MIPSSimulator {
     /*
     Simulate andi instruction. rs & immediate -> rt
      */
-    private void andi(String rs, String rt, String immediate){
+    private void andi(String rs, String rt, String immediate) {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decImmediate = Integer.parseInt(immediate, 16);
@@ -76,18 +86,18 @@ public class MIPSSimulator {
     Simulate beq instruction. if rs == rt then PC + offset(immediate)
     Instruction already works using PC+4 and PC is incremented in main loop
      */
-    private void beq(String rs, String rt, String offset){
+    private void beq(String rs, String rt, String offset) {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decOffset = Integer.parseInt(offset, 16);
         //I think this will convert to negative. Check if highest bit is 1
         //If it is, undo two's complement and negate the integer.
-        if((decOffset >> 15) == 1){
+        if ((decOffset >> 15) == 1) {
             decOffset = ~decOffset;
             decOffset += 1;
             decOffset = -decOffset;
         }
-        if(registerArray[decRs].equals(registerArray[decRt])){
+        if (registerArray[decRs].equals(registerArray[decRt])) {
             programCounter += decOffset;
         }
     }
@@ -95,19 +105,153 @@ public class MIPSSimulator {
     /*
     Simulate bne instruction. If rs != rt then PC + offset(immediate)
      */
-    private void bne(String rs, String rt, String offset){
+    private void bne(String rs, String rt, String offset) {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decOffset = Integer.parseInt(offset, 16);
         //I think this will convert to negative. Check if highest bit is 1
         //If it is, undo two's complement and negate the integer.
-        if((decOffset >> 15) == 1){
+        if ((decOffset >> 15) == 1) {
             decOffset = ~decOffset;
             decOffset += 1;
             decOffset = -decOffset;
         }
-        if(!registerArray[decRs].equals(registerArray[decRt])){
+        if (!registerArray[decRs].equals(registerArray[decRt])) {
             programCounter += decOffset;
         }
     }
+
+    /*
+    Simulate j instruction. PC = ((index << 2) | (((PC + 4194304) >> 28) << 28)) - 419304
+    4194304 = 0x00400000
+     */
+    private void j(String index) {
+        int decIndex = Integer.parseInt(index, 16);
+        //Sign extend index by 2 bits
+        //Find program counter with first value being 0x00400000
+        //Get 4 highest bits by bitshifting right 28, then left 28
+        //Bitwise or of sign extended index and program counter
+        //Convert back to initial value of zero by subtracting 0x00400000
+        programCounter = ((decIndex << 2) | (((programCounter + 4194304) >> 28) << 28)) - 419304;
+    }
+
+    /*
+    Simulate lui instruction. immediate | (16 bits of zero) -> rt
+     Basically "0000" + "instruction" -> rt
+     */
+    private void lui(String rt, String immediate) {
+        int decRt = Integer.parseInt(rt, 16);
+        registerArray[decRt] = "0000" + immediate;
+    }
+
+    /*
+    Simulate lw instruction. memory[base(rs) + offset(immediate)] -> rt
+     */
+    private void lw(String base, String rt, String offset) {
+        int decBase = Integer.parseInt(base, 16);
+        int decRt = Integer.parseInt(rt, 16);
+        int decOffset = Integer.parseInt(offset, 16);
+        //Memory array is only 256 elements, but most references are based off
+        //of $sp which starts at INITIALSP. Need to find difference
+        registerArray[decRt] = memoryArray[INITIALSP - (decBase + decOffset)];
+    }
+
+    /*
+    Simulate or instruction. rs | rt -> rd
+     */
+    private void or(String rs, String rt, String rd) {
+        int decRs = Integer.parseInt(rs, 16);
+        int decRt = Integer.parseInt(rt, 16);
+        int decRd = Integer.parseInt(rd, 16);
+        registerArray[decRd] = String.format("%08x", decRs | decRt);
+    }
+
+    /*
+    Simulate ori instruction. rs | immediate -> rt
+     */
+    private void ori(String rs, String rt, String immediate) {
+        int decRs = Integer.parseInt(rs, 16);
+        int decRt = Integer.parseInt(rt, 16);
+        int decImmediate = Integer.parseInt(immediate, 16);
+        registerArray[decRt] = String.format("%08x", decRs | decImmediate);
+    }
+
+    /*
+    Simulate slt instruction. (rs < rt) -> rd. True = 1, False = 0.
+     */
+    private void slt(String rs, String rt, String rd) {
+        int decRs = Integer.parseInt(rs, 16);
+        int decRt = Integer.parseInt(rt, 16);
+        int decRd = Integer.parseInt(rd, 16);
+        if (decRs < decRt) {
+            registerArray[decRd] = String.format("%08x", 1);
+        } else {
+            registerArray[decRd] = String.format("%08x", 0);
+        }
+    }
+
+    /*
+    Simulate sub instruction. rs - rt -> rd
+    */
+    private void sub(String rs, String rt, String rd) {
+        int decRs = Integer.parseInt(rs, 16);
+        int decRt = Integer.parseInt(rt, 16);
+        int decRd = Integer.parseInt(rd, 16);
+        registerArray[decRd] = String.format("%08x", decRs - decRt);
+    }
+
+    /*
+    Simulate sw instruction. rt -> memory[base(rs) + offset(immediate)]
+    */
+    private void sw(String base, String rt, String offset) {
+        int decBase = Integer.parseInt(base, 16);
+        int decRt = Integer.parseInt(rt, 16);
+        int decOffset = Integer.parseInt(offset, 16);
+        //Memory array is only 256 elements, but most references are based off
+        //of $sp which starts at INITIALSP. Need to find difference
+        memoryArray[INITIALSP - (decBase + decOffset)] = registerArray[decRt];
+    }
+
+    /*
+    Simulate syscall instruction
+        $v0 = 1: print integer in $a0
+        $v0 = 4: print null terminated string in $a0
+        $v0 = 5: read integer and save to $v0
+        $v0 = 10: Exit program
+    $v0 is register 2
+    $a0 is register 4
+     */
+    private void syscall(){
+        int v0 = Integer.parseInt(registerArray[2], 16);
+        switch(v0){
+            case PRINTINTCODE:
+                int a0 = Integer.parseInt(registerArray[4], 16);
+                System.out.println(a0);
+                break;
+            case PRINTSTRINGCODE:
+                int dataIndex = Integer.parseInt(registerArray[4],16) - INITIALDATA;
+                int dataRead = Integer.parseInt(dataArray[dataIndex]);
+                while(dataRead != 0){
+                   System.out.print(String.valueOf(dataRead));
+                   if(dataIndex % 4 == 0){
+                       dataIndex += 7;
+                   }
+                   else{
+                       --dataIndex;
+                   }
+                   dataRead = Integer.parseInt(dataArray[dataIndex]);
+                }
+                break;
+            case READINTCODE:
+                Scanner scan = new Scanner(System.in);
+                int readInt = scan.nextInt();
+                registerArray[2] = String.format("%08x", readInt);
+                scan.close();
+                break;
+            case TERMINATECODE:
+                terminateSimulation = true;
+                break;
+        }
+    }
 }
+
