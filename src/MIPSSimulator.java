@@ -264,7 +264,10 @@ public class MIPSSimulator {
         //Get 4 highest bits by bitshifting right 28, then left 28
         //Bitwise or of sign extended index and program counter
         //Convert back to initial value of zero by subtracting 0x00400000
-        programCounter = ((decIndex) | (((programCounter + 4194304) >> 28) << 28)) - 419304;
+        decIndex = decIndex << 2;
+        int truePC = ((programCounter + 4194304) >> 28) << 28;
+        programCounter = ((decIndex | truePC) - 4194304) >> 2;
+        //programCounter = ((decIndex) | (((programCounter + 4194304) >> 28) << 28)) - 419304;
     }
 
     /*
