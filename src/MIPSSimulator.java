@@ -50,8 +50,15 @@ public class MIPSSimulator {
                 String dataLine = dataReader.nextLine();
                 endOfData = dataLine.equals("00000000");
                 //Each element should contain 2 hex characters
+                /*
                 for(int i = 0; i < 4; i++){
-                    dataArray[dataArrayIndex] = dataLine.substring(i, i+2);
+                    dataArray[dataArrayIndex] = dataLine.substring(i * 2, (i * 2) + 2);
+                    ++dataArrayIndex;
+                }
+                 */
+                //Reversing data for the array
+                for(int i = 3; i >= 0; i--){
+                    dataArray[dataArrayIndex] = dataLine.substring(i * 2, (i * 2) + 2);
                     ++dataArrayIndex;
                 }
             }
@@ -247,7 +254,7 @@ public class MIPSSimulator {
     }
 
     /*
-    Simulate j instruction. PC = ((index << 2) | (((PC + 4194304) >> 28) << 28)) - 419304
+    Simulate j instruction. PC = ?
     4194304 = 0x00400000
      */
     private void j(String index) {
@@ -257,7 +264,7 @@ public class MIPSSimulator {
         //Get 4 highest bits by bitshifting right 28, then left 28
         //Bitwise or of sign extended index and program counter
         //Convert back to initial value of zero by subtracting 0x00400000
-        programCounter = ((decIndex << 2) | (((programCounter + 4194304) >> 28) << 28)) - 419304;
+        programCounter = ((decIndex) | (((programCounter + 4194304) >> 28) << 28)) - 419304;
     }
 
     /*
@@ -371,12 +378,15 @@ public class MIPSSimulator {
                 while(dataRead != 0){
                     char ch = (char)dataRead;
                    System.out.print(ch);
+                   ++dataIndex;
+                   /* Original idea
                    if(dataIndex % 4 == 0){
                        dataIndex += 7;
                    }
                    else{
                        --dataIndex;
                    }
+                   */
                    dataRead = Integer.parseInt(dataArray[dataIndex], 16);
                 }
                 break;
