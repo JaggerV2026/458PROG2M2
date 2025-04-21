@@ -168,7 +168,9 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decRd = Integer.parseInt(rd, 16);
-        registerArray[decRd] = String.format("%08x", decRs + decRt);
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        int rightArg = Integer.parseInt(registerArray[decRt], 16);
+        registerArray[decRd] = String.format("%08x", leftArg + rightArg);
     }
 
     /*
@@ -178,7 +180,8 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decImmediate = Integer.parseInt(immediate, 16);
-        registerArray[decRt] = String.format("%08x", decRs + decImmediate);
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        registerArray[decRt] = String.format("%08x", leftArg + decImmediate);
     }
 
     /*
@@ -188,7 +191,9 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decRd = Integer.parseInt(rd, 16);
-        registerArray[decRd] = String.format("%08x", decRs & decRt);
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        int rightArg = Integer.parseInt(registerArray[decRt], 16);
+        registerArray[decRd] = String.format("%08x", leftArg & rightArg);
     }
 
     /*
@@ -198,7 +203,8 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decImmediate = Integer.parseInt(immediate, 16);
-        registerArray[decRt] = String.format("%08x", decRs & decImmediate);
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        registerArray[decRt] = String.format("%08x", leftArg & decImmediate);
     }
 
     /*
@@ -256,11 +262,11 @@ public class MIPSSimulator {
 
     /*
     Simulate lui instruction. immediate | (16 bits of zero) -> rt
-     Basically "0000" + "instruction" -> rt
+     Basically  "instruction" + "0000" -> rt
      */
     private void lui(String rt, String immediate) {
         int decRt = Integer.parseInt(rt, 16);
-        registerArray[decRt] = "0000" + immediate;
+        registerArray[decRt] = immediate + "0000";
     }
 
     /*
@@ -270,9 +276,10 @@ public class MIPSSimulator {
         int decBase = Integer.parseInt(base, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decOffset = Integer.parseInt(offset, 16);
+        int regBase = Integer.parseInt(registerArray[decBase], 16);
         //Memory array is only 256 elements, but most references are based off
         //of $sp which starts at INITIALSP. Need to find difference
-        registerArray[decRt] = memoryArray[INITIALSP - (decBase + decOffset)];
+        registerArray[decRt] = memoryArray[INITIALSP - (regBase + decOffset)];
     }
 
     /*
@@ -282,7 +289,9 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decRd = Integer.parseInt(rd, 16);
-        registerArray[decRd] = String.format("%08x", decRs | decRt);
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        int rightArg = Integer.parseInt(registerArray[decRt], 16);
+        registerArray[decRd] = String.format("%08x", leftArg | rightArg);
     }
 
     /*
@@ -292,7 +301,8 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decImmediate = Integer.parseInt(immediate, 16);
-        registerArray[decRt] = String.format("%08x", decRs | decImmediate);
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        registerArray[decRt] = String.format("%08x", leftArg | decImmediate);
     }
 
     /*
@@ -302,7 +312,9 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decRd = Integer.parseInt(rd, 16);
-        if (decRs < decRt) {
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        int rightArg = Integer.parseInt(registerArray[decRt], 16);
+        if (leftArg < rightArg) {
             registerArray[decRd] = String.format("%08x", 1);
         } else {
             registerArray[decRd] = String.format("%08x", 0);
@@ -316,7 +328,9 @@ public class MIPSSimulator {
         int decRs = Integer.parseInt(rs, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decRd = Integer.parseInt(rd, 16);
-        registerArray[decRd] = String.format("%08x", decRs - decRt);
+        int leftArg = Integer.parseInt(registerArray[decRs], 16);
+        int rightArg = Integer.parseInt(registerArray[decRt], 16);
+        registerArray[decRd] = String.format("%08x", leftArg - rightArg);
     }
 
     /*
@@ -326,9 +340,10 @@ public class MIPSSimulator {
         int decBase = Integer.parseInt(base, 16);
         int decRt = Integer.parseInt(rt, 16);
         int decOffset = Integer.parseInt(offset, 16);
+        int regBase = Integer.parseInt(registerArray[decBase], 16);
         //Memory array is only 256 elements, but most references are based off
         //of $sp which starts at INITIALSP. Need to find difference
-        memoryArray[INITIALSP - (decBase + decOffset)] = registerArray[decRt];
+        memoryArray[INITIALSP - (regBase + decOffset)] = registerArray[decRt];
     }
 
     /*
@@ -349,17 +364,20 @@ public class MIPSSimulator {
                 break;
             case PRINTSTRINGCODE:
                 //Might need to divide this by 4. Not sure yet.
+                //First read gives initial index of 1, but array starts at 0.
+                //I'm assuming this is just how this works.
                 int dataIndex = Integer.parseInt(registerArray[4],16) - INITIALDATA;
-                int dataRead = Integer.parseInt(dataArray[dataIndex]);
+                int dataRead = Integer.parseInt(dataArray[dataIndex], 16);
                 while(dataRead != 0){
-                   System.out.print(String.valueOf(dataRead));
+                    char ch = (char)dataRead;
+                   System.out.print(ch);
                    if(dataIndex % 4 == 0){
                        dataIndex += 7;
                    }
                    else{
                        --dataIndex;
                    }
-                   dataRead = Integer.parseInt(dataArray[dataIndex]);
+                   dataRead = Integer.parseInt(dataArray[dataIndex], 16);
                 }
                 break;
             case READINTCODE:
